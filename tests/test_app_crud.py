@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from app.crud import create_task, get_task, get_tasks, update_task, delete_task
+from app.crud import create_task, get_task, get_tasks, update_task, delete_task, get_tasks_by_priority
 from app.schemas import TaskCreate, TaskUpdate
 
 
@@ -18,7 +18,7 @@ def mock_db():
 
 @pytest.fixture
 def sample_task_data():
-    return {"title": "Test", "description": "Desc", "due_date": "2025-01-01", "status": "pending"}
+    return {"title": "Test", "description": "Desc", "due_date": "2025-01-01", "status": "pending", "priority": "medium"}
 
 
 @pytest.fixture

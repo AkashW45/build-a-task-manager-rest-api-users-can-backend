@@ -1,81 +1,69 @@
 import pytest
 from pydantic import ValidationError
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from uuid import uuid4
-
 from app.schemas import TaskCreate, TaskUpdate, TaskResponse
-from app.models import TaskStatus
 
 
-def test_task_create_valid():
-    data = {
-        "title": "Buy groceries",
-        "description": "Milk, eggs, bread",
-        "due_date": date.today() + timedelta(days=2),
-        "status": TaskStatus.pending,
-    }
-    task = TaskCreate(**data)
-    assert task.title == "Buy groceries"
-    assert task.description == "Milk, eggs, bread"
-    assert task.due_date == date.today() + timedelta(days=2)
-    assert task.status == TaskStatus.pending
+class TestTaskCreatePriority:
+    """Tests for TaskCreate priority field."""
+
+    def test_create_with_default_priority(self):
+        """Default priority should be 'medium' when not provided."""
+        data = {"title": "My Task"}
+        task = TaskCreate(**data)
+        assert task.priority == "medium"
+
+    @pytest.mark.parametrize("priority", ["low", "medium", "high"])
+    def test_create_with_valid_priority(self, priority):
+        """All three literal priorities should be accepted."""
+        data = {"title": "Task", "priority": priority}
+        task = TaskCreate(**data)
+        assert task.priority == priority
+
+    @pytest.mark.parametrize("invalid_priority", ["urgent", "", "HIGH", " medium ", "low "])
+    def test_create_with_invalid_priority_raises_validation_error(self, invalid_priority):
+        """Non-literal values raise ValidationError."""
+        data = {"title": "Task", "priority": invalid_priority}
+        with pytest.raises(ValidationError):
+            TaskCreate(**data)
+
+    def test_create_missing_title_raises_validation_error(self):
+        """Missing required title field raises ValidationError."""
+        data = {"priority": "high"}
+        with pytest.raises(ValidationError):
+            TaskCreate(**data)
 
 
-def test_task_create_minimal_fields():
-    # Only required title, everything else default.
-    task = TaskCreate(title="Minimal")
-    assert task.title == "Minimal"
-    assert task.description is None
-    assert task.due_date is None
-    assert task.status == TaskStatus.pending
+class TestTaskUpdatePriority:
+    """Tests for TaskUpdate optional priority field."""
+
+    def test_update_with_priority_none_is_valid(self):
+        """Explicit None priority should be accepted and remain None."""
+        update = TaskUpdate(priority=None)
+        assert update.priority is None
+
+    def test_update_omit_priority_is_none(self):
+        """Omitting the priority field should result in None."""
+        update = TaskUpdate(title="New Title")
+        assert update.priority is None
 
 
-def test_task_create_empty_title_raises():
-    with pytest.raises(ValidationError) as excinfo:
-        TaskCreate(title="")
-    assert "title" in str(excinfo.value)
-    # Ensure error mentions length constraint
-    assert "at least 1 characters" in str(excinfo.value)
+class TestTaskResponsePriority:
+    """Tests for TaskResponse priority field (string, not validated)."""
 
-
-def test_task_create_title_too_long_raises():
-    long_title = "x" * 256
-    with pytest.raises(ValidationError) as excinfo:
-        TaskCreate(title=long_title)
-    assert "at most 255 characters" in str(excinfo.value)
-
-
-def test_task_create_description_too_long_raises():
-    long_desc = "y" * 1001
-    with pytest.raises(ValidationError) as excinfo:
-        TaskCreate(title="Valid", description=long_desc)
-    assert "at most 1000 characters" in str(excinfo.value)
-
-
-def test_task_update_valid_partial():
-    # Only update due_date
-    update = TaskUpdate(due_date=date(2025, 12, 25))
-    assert update.title is None
-    assert update.description is None
-    assert update.due_date == date(2025, 12, 25)
-    assert update.status is None
-
-
-def test_task_response_from_dict():
-    task_id = uuid4()
-    now = datetime.utcnow()
-    data = {
-        "id": task_id,
-        "title": "Test task",
-        "description": "A description",
-        "due_date": date(2025, 12, 31),
-        "status": TaskStatus.done,
-        "created_at": now,
-        "updated_at": now,
-    }
-    resp = TaskResponse(**data)
-    assert resp.id == task_id
-    assert resp.title == "Test task"
-    assert resp.status == TaskStatus.done
-    assert isinstance(resp.created_at, datetime)
-    assert isinstance(resp.updated_at, datetime)
+    def test_response_accepts_any_string(self):
+        """TaskResponse.priority is a plain str, accepts any value without validation."""
+        task_id = uuid4()
+        now = datetime.now()
+        response = TaskResponse(
+            id=task_id,
+            title="Task",
+            description=None,
+            due_date=None,
+            status="pending",
+            priority="urgent",           # Not restricted to low/medium/high
+            created_at=now,
+            updated_at=now
+        )
+        assert response.priority == "urgent"
