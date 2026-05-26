@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import date, datetime
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Literal
 from app.models import TaskStatus
 
 
@@ -10,6 +10,7 @@ class TaskCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     due_date: Optional[date] = None
     status: TaskStatus = TaskStatus.pending
+    priority: Literal['low', 'medium', 'high'] = 'medium'
 
 
 class TaskUpdate(BaseModel):
@@ -17,6 +18,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     due_date: Optional[date] = None
     status: Optional[TaskStatus] = None
+    priority: Optional[Literal['low', 'medium', 'high']] = None
 
 
 class TaskResponse(BaseModel):
@@ -25,6 +27,7 @@ class TaskResponse(BaseModel):
     description: Optional[str]
     due_date: Optional[date]
     status: TaskStatus
+    priority: str
     created_at: datetime
     updated_at: datetime
 

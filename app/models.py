@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Date, Enum, DateTime
+from sqlalchemy import CheckConstraint, Column, String, Text, Date, Enum, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -22,8 +22,13 @@ class Task(Base):
     description = Column(Text, nullable=True, default="")
     due_date = Column(Date, nullable=True)
     status = Column(Enum(TaskStatus, name="task_status"), nullable=False, default=TaskStatus.pending)
+    priority = Column(String, nullable=False, default="medium")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    __table_args__ = (
+        CheckConstraint(priority.in_(["low", "medium", "high"]), name="ck_task_priority"),
+    )
+
     def __repr__(self):
-        return f"<Task(id={self.id}, title={self.title}, status={self.status})>"
+        return f"<Task(id={self.id}, title={self.title}, status={self.status}, priority={self.priority})>"
